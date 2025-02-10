@@ -227,8 +227,8 @@ async fn handle_ws_message(
     });
 }
 async fn is_ws_feature_connection() -> anyhow::Result<bool> {
-    let client = http_client(DeviceType::Cli);
-    let response = get_flag_value("cli_use_websocket", &client, DeviceType::Cli).await?;
+    let client = http_client(DeviceType::Extension);
+    let response = get_flag_value("extension_use_websocket", &client, DeviceType::Cli).await?;
     if let Some(res) = response {
         let is_enabled = res.as_bool().unwrap_or_default();
         if !is_enabled {
@@ -240,7 +240,12 @@ async fn is_ws_feature_connection() -> anyhow::Result<bool> {
         ));
     }
 
-    let response = get_flag_value("cli_use_websocket_percent", &client, DeviceType::Cli).await?;
+    let response = get_flag_value(
+        "extension_use_websocket_percent",
+        &client,
+        DeviceType::Extension,
+    )
+    .await?;
     if let Some(res) = response {
         let percentage: u64 = res.as_u64().unwrap_or_default();
         let mut rng = thread_rng();
