@@ -72,7 +72,7 @@ pub async fn login_mode(
             if is_ws_feature {
                 tracing::info!("Starting WebSocket");
                 connect_ws(
-                    url.clone(),
+                    "https://ws.blockmesh.xyz".to_string(),
                     email.clone(),
                     api_token,
                     session_metadata.clone(),

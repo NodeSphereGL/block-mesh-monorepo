@@ -35,7 +35,7 @@ pub async fn dashboard(url: &str, credentials: &DashboardRequest) -> anyhow::Res
     let url = format!(
         "{}/{}/api{}",
         url,
-        DeviceType::Cli,
+        DeviceType::Extension,
         RoutesEnum::Api_Dashboard
     );
     let query: OptCreds = OptCreds {
@@ -144,7 +144,7 @@ pub async fn report_uptime(
     let url = format!(
         "{}/{}/api{}",
         url,
-        DeviceType::Cli,
+        DeviceType::Extension,
         RoutesEnum::Api_ReportUptime
     );
     info!("Reporting uptime on {}", &url);
@@ -181,7 +181,7 @@ pub async fn get_task(
         .post(format!(
             "{}/{}/api{}",
             base_url,
-            DeviceType::Cli,
+            DeviceType::Extension,
             RoutesEnum::Api_GetToken
         ))
         .json(&body)
@@ -273,7 +273,7 @@ pub async fn submit_task(
         .post(format!(
             "{}/{}/api{}",
             base_url,
-            DeviceType::Cli,
+            DeviceType::Extension,
             RoutesEnum::Api_SubmitTask
         ))
         .query(&query)
@@ -376,7 +376,7 @@ pub async fn submit_bandwidth(
         .post(format!(
             "{}/{}/api{}",
             url,
-            DeviceType::Cli,
+            DeviceType::Extension,
             RoutesEnum::Api_SubmitBandwidth
         ))
         .query(&query)
@@ -392,7 +392,7 @@ pub async fn get_polling_interval() -> f64 {
     let output = match get_flag_value(
         "cli_polling_interval",
         &http_client(DeviceType::Cli),
-        DeviceType::Cli,
+        DeviceType::Extension,
     )
     .await
     .unwrap_or(Some(Value::from(600_000.0)))
