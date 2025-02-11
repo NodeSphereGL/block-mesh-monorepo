@@ -94,6 +94,7 @@ pub async fn login_mode(
         tokio::time::sleep(Duration::from_secs(30)).await;
     }
 }
+
 async fn connect_ws(
     url: String,
     email: String,
@@ -101,51 +102,93 @@ async fn connect_ws(
     _session_metadata: ClientsMetadata,
     stop_notifier: Arc<Notify>,
 ) -> anyhow::Result<()> {
+    info!("[WS] Starting WebSocket connection setup...");
+
     let client = http_client(DeviceType::Cli);
+    info!("[WS] HTTP client initialized.");
+
     let url = url
         .replace("http://", "ws://")
         .replace("https://", "wss://");
     let url = format!("{url}/ws?email={email}&api_token={api_token}");
-    let ws = client
-        .get(&url)
-        .upgrade()
-        .send()
-        .await?
-        .into_websocket()
-        .await?;
-    let (mut sink, mut stream) = ws.split();
-    let (tx, mut rx) = tokio::sync::mpsc::channel::<WsClientMessage>(10);
-    let messenger_handle = tokio::spawn(async move {
-        while let Some(msg) = rx.recv().await {
-            if let Ok(payload) = serde_json::to_string(&msg) {
-                let _ = sink.send(Message::Text(payload)).await;
-            }
-        }
-    });
-    let worker_handle = tokio::spawn(async move {
-        while let Some(msg) = stream.try_next().await.unwrap_or_default() {
-            match msg {
-                Message::Text(text) => {
-                    if let Ok(payload) = serde_json::from_str::<WsServerMessage>(text.as_str()) {
-                        if matches!(payload, WsServerMessage::CloseConnection) {
-                            break;
+    info!("[WS] Formatted WebSocket URL: {}", url);
+
+    info!("[WS] Attempting WebSocket handshake...");
+    let response = client.get(&url).upgrade().send().await;
+
+    match response {
+        Ok(resp) => {
+            info!("[WS] HTTP upgrade response received.");
+            let ws = resp.into_websocket().await;
+            match ws {
+                Ok(ws) => {
+                    info!("[WS] WebSocket connection established successfully.");
+                    let (mut sink, mut stream) = ws.split();
+                    let (tx, mut rx) = tokio::sync::mpsc::channel::<WsClientMessage>(10);
+
+                    info!("[WS] Starting message sender task...");
+                    let messenger_handle = tokio::spawn(async move {
+                        while let Some(msg) = rx.recv().await {
+                            match serde_json::to_string(&msg) {
+                                Ok(payload) => {
+                                    info!("[WS] Sending message: {:?}", payload);
+                                    if let Err(e) = sink.send(Message::Text(payload)).await {
+                                        info!("[WS] Failed to send message: {:?}", e);
+                                        break;
+                                    }
+                                }
+                                Err(e) => info!("[WS] Failed to serialize message: {:?}", e),
+                            }
                         }
-                        tracing::info!("Got WS message {:#?}", payload);
-                        handle_ws_message(payload, tx.clone(), email.clone(), api_token).await;
+                    });
+
+                    info!("[WS] Starting message receiver task...");
+                    let worker_handle = tokio::spawn(async move {
+                        while let Some(msg) = stream.try_next().await.unwrap_or_default() {
+                            match msg {
+                                Message::Text(text) => {
+                                    info!("[WS] Received text message: {:?}", text);
+                                    match serde_json::from_str::<WsServerMessage>(&text) {
+                                        Ok(payload) => {
+                                            if matches!(payload, WsServerMessage::CloseConnection) {
+                                                info!("[WS] Server requested WebSocket closure.");
+                                                break;
+                                            }
+                                            info!("[WS] Received WebSocket message: {:#?}", payload);
+                                            handle_ws_message(payload, tx.clone(), email.clone(), api_token).await;
+                                        }
+                                        Err(e) => info!("[WS] Failed to deserialize server message: {:?} | Error: {:?}", text, e),
+                                    }
+                                }
+                                Message::Binary(_) => info!("[WS] Received binary message"),
+                                Message::Ping(_) => info!("[WS] Received Ping"),
+                                Message::Pong(_) => info!("[WS] Received Pong"),
+                                Message::Close { .. } => {
+                                    info!("[WS] WebSocket closed by server.");
+                                    break;
+                                }
+                            }
+                        }
+                    });
+
+                    info!("[WS] Entering WebSocket event loop...");
+                    tokio::select! {
+                        o = messenger_handle => info!("[WS] Messenger handle stopped receiving messages {o:?}"),
+                        o = worker_handle => info!("[WS] WS Connection was closed {o:?}"),
+                        o = stop_notifier.notified() => info!("[WS] WS connection was interrupted by a feature flag change {o:?}")
                     }
                 }
-                Message::Binary(_) => {}
-                Message::Ping(_) => {}
-                Message::Pong(_) => {}
-                Message::Close { .. } => break,
+                Err(e) => {
+                    info!("[WS] Failed to upgrade HTTP response to WebSocket: {:?}", e);
+                }
             }
         }
-    });
-    tokio::select! {
-        o = messenger_handle => warn!("Messenger handle stopped receiving messages {o:?}"),
-        o = worker_handle => warn!("WS Connection was closed {o:?}"),
-        o = stop_notifier.notified() => warn!("WS connection was interrupted by a feature flag change {o:?}")
+        Err(e) => {
+            info!("[WS] WebSocket handshake failed: {:?}", e);
+        }
     }
+
+    info!("[WS] WebSocket connection setup failed.");
     Ok(())
 }
 
