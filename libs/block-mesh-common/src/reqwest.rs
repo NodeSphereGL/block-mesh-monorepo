@@ -13,7 +13,7 @@ pub fn http_client(device_type: DeviceType) -> Client {
 
     // Add proxy support (SOCKS5)
     if let Ok(proxy_url) = env::var("SOCKS5_PROXY") {
-        match Proxy::socks5(&proxy_url) {
+        match Proxy::all(&proxy_url) {
             Ok(proxy) => {
                 client_builder = client_builder.proxy(proxy);
                 println!("Using SOCKS5 proxy: {}", proxy_url); // Add logging
@@ -42,7 +42,7 @@ pub fn http_client(device_type: DeviceType) -> Client {
 
     // Add proxy support (SOCKS5)
     if let Ok(proxy_url) = env::var("SOCKS5_PROXY") {
-        match Proxy::socks5(&proxy_url) {
+        match Proxy::all(&proxy_url) {
             Ok(proxy) => {
                 client_builder = client_builder.proxy(proxy);
                 println!("Using SOCKS5 proxy: {}", proxy_url); // Add logging
