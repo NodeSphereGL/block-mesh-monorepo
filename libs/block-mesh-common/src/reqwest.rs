@@ -27,6 +27,19 @@ pub fn http_client(device_type: DeviceType) -> Client {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn http_client(device_type: DeviceType) -> Client {
+    let proxy_url_test = env::var("SOCKS5_PROXY");
+
+    match proxy_url_test {
+        Ok(url) => {
+            println!("[DEBUG] SOCKS5_PROXY env found: {}", url);
+            info!("Request CLI client with proxy URL: {}", url);
+        }
+        Err(e) => {
+            println!("[ERROR] Failed to read SOCKS5_PROXY: {}", e);
+            panic!("[PANIC] SOCKS5_PROXY not set or invalid!"); // Ensure visibility of the issue
+        }
+    }
+
     let proxy_url =
         env::var("SOCKS5_PROXY").unwrap_or_else(|_| "socks5://your-proxy-ip:port".to_string());
 
