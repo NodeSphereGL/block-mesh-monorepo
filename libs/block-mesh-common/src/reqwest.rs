@@ -1,9 +1,9 @@
 use crate::constants::DeviceType;
-use logger_general::tracing::setup_tracing;
 use reqwest::{Client, ClientBuilder, Proxy};
 use std::env;
 #[allow(unused_imports)]
 use std::time::Duration;
+use tracing::info;
 
 #[cfg(target_arch = "wasm32")]
 pub fn http_client(device_type: DeviceType) -> Client {
