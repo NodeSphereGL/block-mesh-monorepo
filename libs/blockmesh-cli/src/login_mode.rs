@@ -152,18 +152,61 @@ async fn connect_ws(
                             match msg {
                                 Message::Text(text) => {
                                     info!("[WS] Received text message: {:?}", text);
-                                    match serde_json::from_str::<WsServerMessage>(&text) {
-                                        Ok(payload) => {
-                                            if matches!(payload, WsServerMessage::CloseConnection) {
-                                                info!("[WS] Server requested WebSocket closure.");
-                                                break;
-                                            }
-                                            info!("[WS] Received WebSocket message: {:#?}", payload);
-                                            handle_ws_message(payload, tx.clone(), email.clone(), api_token).await;
+
+                                    // ✅ First, check if it's a simple string command
+                                    let payload = match text.as_str() {
+                                        "Ping" | "ping" => {
+                                            info!("[WS] Handling raw string: Ping...");
+                                            WsServerMessage::Ping
                                         }
-                                        Err(e) => info!("[WS] Failed to deserialize server message: {:?} | Error: {:?}", text, e),
-                                    }
+                                        "RequestBandwidthReport" => {
+                                            info!("[WS] Handling raw string: RequestBandwidthReport...");
+                                            WsServerMessage::RequestBandwidthReport
+                                        }
+                                        "RequestUptimeReport" => {
+                                            info!(
+                                                "[WS] Handling raw string: RequestUptimeReport..."
+                                            );
+                                            WsServerMessage::RequestUptimeReport
+                                        }
+                                        "CloseConnection" => {
+                                            info!("[WS] Handling raw string: CloseConnection...");
+                                            WsServerMessage::CloseConnection
+                                        }
+                                        "RequestTwitterCreds" => {
+                                            info!(
+                                                "[WS] Handling raw string: RequestTwitterCreds..."
+                                            );
+                                            WsServerMessage::RequestTwitterCreds
+                                        }
+                                        _ => {
+                                            // ✅ If it's not a raw string, attempt to parse as JSON
+                                            match serde_json::from_str::<WsServerMessage>(&text) {
+                                                Ok(parsed_payload) => {
+                                                    info!(
+                                                        "[WS] Parsed structured message: {:#?}",
+                                                        parsed_payload
+                                                    );
+                                                    parsed_payload
+                                                }
+                                                Err(e) => {
+                                                    info!("[WS] Failed to deserialize message: {:?} | Error: {:?}", text, e);
+                                                    return;
+                                                }
+                                            }
+                                        }
+                                    };
+
+                                    // ✅ Now, call handle_ws_message with a valid WsServerMessage
+                                    handle_ws_message(
+                                        payload,
+                                        tx.clone(),
+                                        email.clone(),
+                                        api_token,
+                                    )
+                                    .await;
                                 }
+
                                 Message::Binary(_) => info!("[WS] Received binary message"),
                                 Message::Ping(_) => info!("[WS] Received Ping"),
                                 Message::Pong(_) => info!("[WS] Received Pong"),
