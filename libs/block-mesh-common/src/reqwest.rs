@@ -1,4 +1,5 @@
 use crate::constants::DeviceType;
+use logger_general::tracing::setup_tracing;
 use reqwest::{Client, ClientBuilder, Proxy};
 use std::env;
 #[allow(unused_imports)]
@@ -8,6 +9,8 @@ use std::time::Duration;
 pub fn http_client(device_type: DeviceType) -> Client {
     let proxy_url =
         env::var("SOCKS5_PROXY").unwrap_or_else(|_| "socks5://your-proxy-ip:port".to_string());
+
+    info!("Request wasm32 client with proxy URL: {}", proxy_url);
 
     let proxy = Proxy::all(&proxy_url).expect("Invalid SOCKS5 proxy URL");
 
@@ -26,6 +29,8 @@ pub fn http_client(device_type: DeviceType) -> Client {
 pub fn http_client(device_type: DeviceType) -> Client {
     let proxy_url =
         env::var("SOCKS5_PROXY").unwrap_or_else(|_| "socks5://your-proxy-ip:port".to_string());
+
+    info!("Request CLI client with proxy URL: {}", proxy_url);
 
     let proxy = Proxy::all(&proxy_url).expect("Invalid SOCKS5 proxy URL");
 
