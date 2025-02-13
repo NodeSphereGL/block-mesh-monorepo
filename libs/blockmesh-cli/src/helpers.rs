@@ -93,12 +93,7 @@ pub async fn login_to_network(url: &str, login_form: LoginForm) -> anyhow::Resul
     } else {
         url.to_string()
     };
-    let url = format!(
-        "{}/{}/api{}",
-        url,
-        DeviceType::Cli,
-        RoutesEnum::Api_GetToken
-    );
+    let url = format!("{}/api{}", url, RoutesEnum::Api_GetToken);
     let query: OptCreds = OptCreds {
         email: Some(login_form.email.to_string()),
         api_token: None,

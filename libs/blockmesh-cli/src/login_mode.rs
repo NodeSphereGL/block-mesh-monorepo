@@ -61,7 +61,7 @@ pub async fn login_mode(
     info!("CLI starting");
     let session_metadata = ClientsMetadata {
         depin_aggregator,
-        device_type: DeviceType::Cli,
+        device_type: DeviceType::Extension,
         version: Some(env!("CARGO_PKG_VERSION").to_string()),
     };
     let mut prev_is_ws_feature: Option<bool> = None;
@@ -318,7 +318,8 @@ async fn handle_ws_message(
 }
 async fn is_ws_feature_connection() -> anyhow::Result<bool> {
     let client = http_client(DeviceType::Extension);
-    let response = get_flag_value("extension_use_websocket", &client, DeviceType::Cli).await?;
+    let response =
+        get_flag_value("extension_use_websocket", &client, DeviceType::Extension).await?;
     if let Some(res) = response {
         let is_enabled = res.as_bool().unwrap_or_default();
         if !is_enabled {
