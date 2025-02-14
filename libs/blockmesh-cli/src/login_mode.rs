@@ -32,10 +32,6 @@ pub async fn login_mode(
     password: &str,
     depin_aggregator: Option<String>,
 ) -> anyhow::Result<ExitCode> {
-    for (key, value) in std::env::vars() {
-        println!("[ENV] {} = {}", key, value);
-    }
-
     let url = url.to_string();
     let email = email.to_string();
     info!("CLI running with url {}", url);
